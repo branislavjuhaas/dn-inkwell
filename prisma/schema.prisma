@@ -1,0 +1,119 @@
+// This is your Prisma schema file for DN Inkwell - a journaling application
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Emotion {
+  JOY       @map("joy")
+  GRATITUDE @map("gratitude")
+  SERENITY  @map("serenity")
+  INTEREST  @map("interest")
+  HOPE      @map("hope")
+  PRIDE     @map("pride")
+  AMUSEMENT @map("amusement")
+  LOVE      @map("love")
+  AWE       @map("awe")
+
+  SADNESS    @map("sadness")
+  ANGER      @map("anger")
+  FEAR       @map("fear")
+  ANXIETY    @map("anxiety")
+  GUILT      @map("guilt")
+  SHAME      @map("shame")
+  DISGUST    @map("disgust")
+  LONELINESS @map("loneliness")
+  FATIGUE    @map("fatigue")
+  BOREDOM    @map("boredom")
+
+  SURPRISE    @map("surprise")
+  CONFUSION   @map("confusion")
+  NOSTALGIA   @map("nostalgia")
+  AMBIVALENCE @map("ambivalence")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  createdAt DateTime  @default(now()) @map("created_at")
+  lastLogin DateTime? @default(now()) @map("last_login")
+  email     String    @unique @map("email")
+  password  String // Hashed using scrypt
+  name      String
+  surname   String
+  birthdate String
+  entries   Entry[]
+  people    Person[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Person {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now()) @map("created_at")
+  name      String
+  surname   String
+  search    String? // Searchable string combining name and surname without accents and non-alphanumeric characters
+  note      String?
+  ownerId   Int      @map("owner_id")
+  owner     User     @relation(fields: [ownerId], references: [id])
+  entries   Entry[]
+
+  @@unique([name, surname, ownerId])
+  @@index([ownerId])
+  @@index([search])
+  @@map("people")
+}
+
+model Entry {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now()) @map("created_at")
+  date        String
+  content     String
+  textContent String // Plain text content for processing
+  authorId    Int      @map("author_id")
+  author      User     @relation(fields: [authorId], references: [id])
+  rating      Rating?
+  mentions    Person[]
+
+  @@index([authorId])
+  @@index([date])
+  @@index([authorId, date])
+  @@map("entries")
+}
+
+/// AI-generated mood and emotional ratings for journal entries
+model Rating {
+  id                  Int             @id @default(autoincrement())
+  createdAt           DateTime        @default(now()) @map("created_at")
+  overallMoodScore    Int             @map("overall_mood_score")
+  energyLevel         Int             @map("energy_level")
+  emotionalComplexity Int             @map("emotional_complexity")
+  dominantEmotions    RatingEmotion[]
+  entryId             Int             @unique @map("entry_id")
+  entry               Entry           @relation(fields: [entryId], references: [id])
+
+  @@index([overallMoodScore])
+  @@index([energyLevel])
+  @@index([entryId])
+  @@index([createdAt])
+  @@map("ratings")
+}
+
+model RatingEmotion {
+  id       Int     @id @default(autoincrement())
+  ratingId Int     @map("rating_id")
+  emotion  Emotion
+  rating   Rating  @relation(fields: [ratingId], references: [id])
+
+  @@unique([ratingId, emotion])
+  @@index([ratingId])
+  @@index([emotion])
+  @@map("rating_emotions")
+}
