@@ -78,12 +78,12 @@ defineRouteMeta({
 });
 
 export default defineEventHandler(async (event) => {
-  const body = await readValidatedBody(event, (body) =>
+  const userData = await readValidatedBody(event, (body) =>
     SignupSchema.parse(body)
   );
 
   const existingUser = await prisma.user.findUnique({
-    where: { email: body.email },
+    where: { email: userData.email },
   });
 
   if (existingUser) {
@@ -93,13 +93,11 @@ export default defineEventHandler(async (event) => {
     });
   }
 
+  userData.password = await hashPassword(userData.password);
+
   const user = await prisma.user.create({
     data: {
-      email: body.email,
-      password: await hashPassword(body.password),
-      name: body.name,
-      surname: body.surname,
-      birthdate: body.birthdate,
+      ...userData,
     },
   });
 
