@@ -14,7 +14,7 @@ export default defineNuxtConfig({
       meta: {
         title: "DN Inkwell API",
         description: "API documentation for DN Inkwell",
-        version: "1.0.0",
+        version: "1.25.0.1",
       },
       ui: {
         scalar: {
