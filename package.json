@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@google/genai": "^1.13.0",
     "@nuxt/eslint": "^1.8.0",
     "@prisma/nuxt": "^0.3.0",
     "eslint": "^9.32.0",
