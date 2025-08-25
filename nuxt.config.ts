@@ -7,7 +7,6 @@ export default defineNuxtConfig({
   nitro: {
     experimental: {
       openAPI: true,
-      tasks: true,
     },
     openAPI: {
       route: "/api/_docs/openapi.json",
@@ -19,13 +18,10 @@ export default defineNuxtConfig({
       },
       ui: {
         scalar: {
-          route: "/api/_docs",
+          route: "/api",
         },
         swagger: false,
       },
-    },
-    scheduledTasks: {
-      "7 4 * * 6": ["entries:rate"],
     },
   },
   vite: {
