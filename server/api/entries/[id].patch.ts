@@ -1,9 +1,9 @@
+import { Emotion } from "@prisma/client";
 import { z } from "zod";
 import prisma from "~~/lib/prisma";
 
 const entrySchema = z.object({
   content: z.string().optional(),
-  text: z.string().optional(),
   mentions: z.array(z.int()).min(1).optional(),
   date: z
     .string()
@@ -43,11 +43,6 @@ defineRouteMeta({
                 description:
                   "The rich content of the journal entry (HTML/markdown format). If not provided, existing content is preserved.",
               },
-              text: {
-                type: "string",
-                description:
-                  "Plain text version of the entry content for processing. If not provided, existing text content is preserved.",
-              },
               mentions: {
                 type: "array",
                 items: {
@@ -77,81 +72,80 @@ defineRouteMeta({
             schema: {
               type: "object",
               properties: {
-                id: {
-                  type: "integer",
-                  description: "Unique identifier of the entry",
-                },
-                content: {
-                  type: "string",
-                  description: "The rich content of the journal entry",
-                },
-                textContent: {
-                  type: "string",
-                  description: "Plain text version of the entry content",
-                },
-                date: {
-                  type: "string",
-                  description: "Date of the entry in YYYY-MM-DD format",
-                },
-                authorId: {
-                  type: "integer",
-                  description: "ID of the user who created the entry",
-                },
-                createdAt: {
-                  type: "string",
-                  format: "date-time",
-                  description: "Timestamp when the entry was last updated",
-                },
-                mentions: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      id: { type: "integer" },
-                      name: { type: "string" },
-                      surname: { type: "string" },
-                      note: { type: "string", nullable: true },
-                      createdAt: { type: "string", format: "date-time" },
-                      ownerId: { type: "integer" },
-                    },
-                  },
-                  description: "People mentioned in this entry",
-                },
-                rating: {
+                success: { type: "boolean" },
+                statusCode: { type: "integer" },
+                statusMessage: { type: "string" },
+                entry: {
                   type: "object",
-                  nullable: true,
                   properties: {
-                    id: { type: "integer" },
-                    overallMoodScore: { type: "integer" },
-                    energyLevel: { type: "integer" },
-                    emotionalComplexity: { type: "integer" },
-                    createdAt: { type: "string", format: "date-time" },
-                    entryId: { type: "integer" },
-                    dominantEmotions: {
+                    id: {
+                      type: "integer",
+                      description: "Unique identifier of the entry",
+                    },
+                    content: {
+                      type: "string",
+                      description: "The rich content of the journal entry",
+                    },
+                    textContent: {
+                      type: "string",
+                      description: "Plain text version of the entry content",
+                    },
+                    date: {
+                      type: "string",
+                      description: "Date of the entry in YYYY-MM-DD format",
+                    },
+                    authorId: {
+                      type: "integer",
+                      description: "ID of the user who created the entry",
+                    },
+                    createdAt: {
+                      type: "string",
+                      format: "date-time",
+                      description: "Timestamp when the entry was last updated",
+                    },
+                    mentions: {
                       type: "array",
                       items: {
                         type: "object",
                         properties: {
                           id: { type: "integer" },
-                          emotion: { type: "string" },
-                          ratingId: { type: "integer" },
+                          name: { type: "string" },
+                          surname: { type: "string" },
+                          note: { type: "string", nullable: true },
+                          createdAt: { type: "string", format: "date-time" },
+                          ownerId: { type: "integer" },
                         },
                       },
+                      description: "People mentioned in this entry",
+                    },
+                    rating: {
+                      type: ["object", "null"],
+                      properties: {
+                        id: { type: "integer" },
+                        overallMoodScore: { type: "integer" },
+                        energyLevel: { type: "integer" },
+                        emotionalComplexity: { type: "integer" },
+                        createdAt: { type: "string", format: "date-time" },
+                        entryId: { type: "integer" },
+                        dominantEmotions: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "integer" },
+                              emotion: { type: "string" },
+                              ratingId: { type: "integer" },
+                            },
+                          },
+                        },
+                      },
+                      description:
+                        "AI-generated mood and emotional rating for the entry (may be null until re-analyzed)",
                     },
                   },
-                  description:
-                    "AI-generated mood and emotional rating for the entry (will be null after update until re-analyzed)",
                 },
               },
-              required: [
-                "id",
-                "content",
-                "textContent",
-                "date",
-                "authorId",
-                "createdAt",
-                "mentions",
-              ],
+              required: ["success", "statusCode", "statusMessage", "entry"],
             },
           },
         },
@@ -280,46 +274,64 @@ export default defineEventHandler(async (event) => {
     entrySchema.parse(body)
   );
 
-  // Build update payload only with provided fields
-  const updateData: any = {};
-
-  // Determine if rating should be deleted (only when text actually changes)
-  const deleteRating =
-    body.text !== undefined && body.text !== entry.textContent && entry.rating;
-
-  // Delete rating first if text content is changing
-  if (deleteRating && entry.rating) {
-    // Delete rating emotions first, then the rating (cascade delete)
-    await prisma.ratingEmotion.deleteMany({
-      where: { ratingId: entry.rating.id },
-    });
-
-    await prisma.rating.delete({
-      where: { entryId: entry.id },
-    });
-  }
-
-  if (body.content !== undefined) updateData.content = body.content;
-  if (body.text !== undefined) updateData.textContent = body.text;
-
-  // Preserve previous behavior: if date not provided, use current date
-  updateData.date = body.date || new Date().toISOString().split("T")[0];
-
-  if (body.mentions) {
-    updateData.mentions = {
-      set: body.mentions.map((id) => ({ id })),
-    };
-  }
+  const text = parseTextFromHtml(body.content || entry.content);
 
   const updatedEntry = await prisma.entry.update({
     where: { id: entry.id },
-    data: updateData,
+    data: { textContent: text },
     include: {
       mentions: true,
-      rating: { include: { dominantEmotions: true } },
+      rating: {
+        include: {
+          dominantEmotions: true,
+        },
+      },
     },
   });
 
-  // Return the updated entry
-  return updatedEntry;
+  // Compare if the text content has changed (ignore all non alphanumeric characters)
+  if (
+    text.replace(/[^a-zA-Z0-9]/g, "") ===
+    entry.textContent.replace(/[^a-zA-Z0-9]/g, "")
+  ) {
+    return {
+      success: true,
+      statusCode: 200,
+      statusMessage: "Entry updated successfully",
+      entry: updatedEntry,
+    };
+  }
+
+  const analysis = await getAIAnalysis(text);
+
+  // Delete existing rating if any with all the dominant emotions and then recreate it
+  await prisma.rating.deleteMany({
+    where: { entryId: entry.id },
+  });
+
+  const updatedRanking = await prisma.rating.create({
+    data: {
+      entryId: entry.id,
+      overallMoodScore: analysis.overall_mood_score,
+      energyLevel: analysis.energy_level,
+      emotionalComplexity: analysis.emotional_complexity,
+      dominantEmotions: {
+        create: analysis.dominant_emotions.map((emotion: string) => ({
+          emotion: emotion.toUpperCase() as Emotion,
+        })),
+      },
+    },
+    include: {
+      dominantEmotions: true,
+    },
+  });
+
+  updatedEntry.rating = updatedRanking;
+
+  return {
+    success: true,
+    statusCode: 200,
+    statusMessage: "Entry updated successfully",
+    entry: updatedEntry,
+  };
 });

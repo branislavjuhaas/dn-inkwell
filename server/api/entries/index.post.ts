@@ -1,9 +1,11 @@
+import { Emotion } from "@prisma/client";
 import { z } from "zod";
 import prisma from "~~/lib/prisma";
+import { getAIAnalysis } from "~~/server/utils/analysis";
+import { parseTextFromHtml } from "~~/server/utils/parser";
 
 const entrySchema = z.object({
   content: z.string(),
-  text: z.string(),
   mentions: z.array(z.int()).min(1).optional(),
   date: z
     .string()
@@ -18,7 +20,7 @@ defineRouteMeta({
     tags: ["Entries"],
     summary: "Create Entry",
     description:
-      "Create a new journal entry for the authenticated user. The entry can include content, text content, optional mentions of people, and an optional date.",
+      "Create a new journal entry for the authenticated user. The entry must include `content`; `mentions` and `date` are optional.",
     requestBody: {
       required: true,
       content: {
@@ -31,17 +33,11 @@ defineRouteMeta({
                 description:
                   "The rich content of the journal entry (HTML/markdown format)",
               },
-              text: {
-                type: "string",
-                description:
-                  "Plain text version of the entry content for processing",
-              },
               mentions: {
                 type: "array",
                 items: {
                   type: "integer",
                 },
-                minItems: 1,
                 description:
                   "Optional array of person IDs mentioned in this entry",
               },
@@ -52,7 +48,7 @@ defineRouteMeta({
                   "Date of the entry in YYYY-MM-DD format. Defaults to current date if not provided.",
               },
             },
-            required: ["content", "text"],
+            required: ["content"],
           },
         },
       },
@@ -70,7 +66,7 @@ defineRouteMeta({
                   properties: {
                     id: {
                       type: "integer",
-                      description: "Unique identifier of the created entry",
+                      description: "Unique identifier of the entry",
                     },
                     content: {
                       type: "string",
@@ -93,6 +89,74 @@ defineRouteMeta({
                       format: "date-time",
                       description: "Timestamp when the entry was created",
                     },
+                    mentions: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          id: { type: "integer" },
+                          name: { type: "string" },
+                          surname: { type: "string" },
+                          note: { type: "string", nullable: true },
+                          createdAt: { type: "string", format: "date-time" },
+                          ownerId: { type: "integer" },
+                        },
+                      },
+                      description: "People mentioned in this entry",
+                    },
+                    rating: {
+                      type: "object",
+                      nullable: true,
+                      properties: {
+                        id: { type: "integer" },
+                        overallMoodScore: { type: "integer" },
+                        energyLevel: { type: "integer" },
+                        emotionalComplexity: { type: "integer" },
+                        createdAt: { type: "string", format: "date-time" },
+                        entryId: { type: "integer" },
+                        dominantEmotions: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "integer" },
+                              emotion: {
+                                type: "string",
+                                enum: [
+                                  "JOY",
+                                  "GRATITUDE",
+                                  "SERENITY",
+                                  "INTEREST",
+                                  "HOPE",
+                                  "PRIDE",
+                                  "AMUSEMENT",
+                                  "LOVE",
+                                  "AWE",
+                                  "SADNESS",
+                                  "ANGER",
+                                  "FEAR",
+                                  "ANXIETY",
+                                  "GUILT",
+                                  "SHAME",
+                                  "DISGUST",
+                                  "LONELINESS",
+                                  "FATIGUE",
+                                  "BOREDOM",
+                                  "SURPRISE",
+                                  "CONFUSION",
+                                  "NOSTALGIA",
+                                  "AMBIVALENCE",
+                                ],
+                              },
+                            },
+                          },
+                          description:
+                            "List of dominant emotions detected in the entry",
+                        },
+                      },
+                      description:
+                        "AI-generated mood and emotional rating for the entry",
+                    },
                   },
                   required: [
                     "id",
@@ -101,6 +165,7 @@ defineRouteMeta({
                     "date",
                     "authorId",
                     "createdAt",
+                    "mentions",
                   ],
                 },
               },
@@ -121,13 +186,7 @@ defineRouteMeta({
                 statusCode: { type: "integer" },
                 statusMessage: { type: "string" },
                 message: { type: "string" },
-                data: {
-                  type: "object",
-                  properties: {
-                    name: { type: "string" },
-                    message: { type: "string" },
-                  },
-                },
+                data: { type: "object" },
               },
               required: [
                 "error",
@@ -142,6 +201,24 @@ defineRouteMeta({
       },
       401: {
         description: "Unauthorized - User session not found",
+        content: {
+          "application/json": {
+            schema: {
+              type: "object",
+              properties: {
+                error: { type: "boolean" },
+                url: { type: "string" },
+                statusCode: { type: "integer" },
+                statusMessage: { type: "string" },
+                message: { type: "string" },
+                data: { type: "object" },
+              },
+            },
+          },
+        },
+      },
+      403: {
+        description: "Forbidden - Mention ownership violation",
         content: {
           "application/json": {
             schema: {
@@ -191,10 +268,13 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  const text = parseTextFromHtml(body.content);
+  const analysis = await getAIAnalysis(text);
+
   const entry = await prisma.entry.create({
     data: {
       content: body.content,
-      textContent: body.text,
+      textContent: text,
       mentions: body.mentions
         ? {
             connect: body.mentions.map((id) => ({ id })),
@@ -202,6 +282,26 @@ export default defineEventHandler(async (event) => {
         : undefined,
       date: body.date || `${new Date().toISOString().split("T")[0]}`,
       authorId: Number((session.user as any).id),
+      rating: {
+        create: {
+          overallMoodScore: analysis.overall_mood_score,
+          energyLevel: analysis.energy_level,
+          emotionalComplexity: analysis.emotional_complexity,
+          dominantEmotions: {
+            create: analysis.dominant_emotions.map((emotion: string) => ({
+              emotion: emotion.toUpperCase() as Emotion,
+            })),
+          },
+        },
+      },
+    },
+    include: {
+      mentions: true,
+      rating: {
+        include: {
+          dominantEmotions: true,
+        },
+      },
     },
   });
 
