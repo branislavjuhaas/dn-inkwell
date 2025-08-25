@@ -152,5 +152,5 @@ export default defineEventHandler(async (event) => {
     where: { id: entry.id },
   });
 
-  setResponseStatus(event, 204);
+  setResponseStatus(event, 204, "Entry deleted successfully");
 });

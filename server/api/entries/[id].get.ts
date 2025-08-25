@@ -26,6 +26,9 @@ defineRouteMeta({
             schema: {
               type: "object",
               properties: {
+                error: { type: "boolean" },
+                statusCode: { type: "integer" },
+                statusMessage: { type: "string" },
                 entry: {
                   type: "object",
                   properties: {
@@ -70,8 +73,7 @@ defineRouteMeta({
                       description: "People mentioned in this entry",
                     },
                     rating: {
-                      type: "object",
-                      nullable: true,
+                      type: ["object", "null"],
                       properties: {
                         id: { type: "integer" },
                         overallMoodScore: { type: "integer" },
@@ -115,8 +117,6 @@ defineRouteMeta({
                               },
                             },
                           },
-                          description:
-                            "List of dominant emotions detected in the entry",
                         },
                       },
                       description:
@@ -134,7 +134,7 @@ defineRouteMeta({
                   ],
                 },
               },
-              required: ["entry"],
+              required: ["error", "statusCode", "statusMessage", "entry"],
             },
           },
         },
@@ -260,6 +260,9 @@ export default defineEventHandler(async (event) => {
   }
 
   return {
+    error: false,
+    statusCode: 200,
+    statusMessage: "Entry retrieved successfully",
     entry,
   };
 });
