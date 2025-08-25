@@ -169,6 +169,28 @@ export default defineEventHandler(async (event) => {
     entrySchema.parse(body)
   );
 
+  // Check if ownership of mentions is violated
+  const mentionOwners = await prisma.person.findMany({
+    where: {
+      id: {
+        in: body.mentions || [],
+      },
+    },
+    select: {
+      id: true,
+      ownerId: true,
+    },
+  });
+
+  for (const mention of mentionOwners) {
+    if (mention.ownerId !== (session.user as any).id) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: `You are not allowed to mention person with ID ${mention.id}`,
+      });
+    }
+  }
+
   const entry = await prisma.entry.create({
     data: {
       content: body.content,

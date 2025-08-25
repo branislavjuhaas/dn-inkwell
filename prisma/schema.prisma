@@ -62,7 +62,7 @@ model Person {
   search    String? // Searchable string combining name and surname without accents and non-alphanumeric characters
   note      String?
   ownerId   Int      @map("owner_id")
-  owner     User     @relation(fields: [ownerId], references: [id])
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   entries   Entry[]
 
   @@unique([name, surname, ownerId])
@@ -78,7 +78,7 @@ model Entry {
   content     String
   textContent String // Plain text content for processing
   authorId    Int      @map("author_id")
-  author      User     @relation(fields: [authorId], references: [id])
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   rating      Rating?
   mentions    Person[]
 
@@ -97,7 +97,7 @@ model Rating {
   emotionalComplexity Int             @map("emotional_complexity")
   dominantEmotions    RatingEmotion[]
   entryId             Int             @unique @map("entry_id")
-  entry               Entry           @relation(fields: [entryId], references: [id])
+  entry               Entry           @relation(fields: [entryId], references: [id], onDelete: Cascade)
 
   @@index([overallMoodScore])
   @@index([energyLevel])
@@ -110,7 +110,7 @@ model RatingEmotion {
   id       Int     @id @default(autoincrement())
   ratingId Int     @map("rating_id")
   emotion  Emotion
-  rating   Rating  @relation(fields: [ratingId], references: [id])
+  rating   Rating  @relation(fields: [ratingId], references: [id], onDelete: Cascade)
 
   @@unique([ratingId, emotion])
   @@index([ratingId])

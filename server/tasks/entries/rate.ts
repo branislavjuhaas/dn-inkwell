@@ -104,36 +104,33 @@ const ratingSchema = z.object({
   overall_mood_score: z.number().min(0).max(100),
   energy_level: z.number().min(0).max(100),
   emotional_complexity: z.number().min(0).max(100),
-  dominant_emotions: z
-    .array(
-      z.enum([
-        "joy",
-        "gratitude",
-        "serenity",
-        "interest",
-        "hope",
-        "pride",
-        "amusement",
-        "love",
-        "awe",
-        "sadness",
-        "anger",
-        "fear",
-        "anxiety",
-        "guilt",
-        "shame",
-        "disgust",
-        "loneliness",
-        "fatigue",
-        "boredom",
-        "surprise",
-        "confusion",
-        "nostalgia",
-        "ambivalence",
-      ])
-    )
-    .min(3)
-    .max(5),
+  dominant_emotions: z.array(
+    z.enum([
+      "joy",
+      "gratitude",
+      "serenity",
+      "interest",
+      "hope",
+      "pride",
+      "amusement",
+      "love",
+      "awe",
+      "sadness",
+      "anger",
+      "fear",
+      "anxiety",
+      "guilt",
+      "shame",
+      "disgust",
+      "loneliness",
+      "fatigue",
+      "boredom",
+      "surprise",
+      "confusion",
+      "nostalgia",
+      "ambivalence",
+    ])
+  ),
 });
 
 export default defineTask({
