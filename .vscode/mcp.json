@@ -1,0 +1,19 @@
+{
+"inputs": [
+  {
+    "type": "promptString"
+  }
+],
+"servers": {
+    "better-auth": {
+      "url": "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp"
+    },
+    "nuxt": {
+      "url": "https://mcp.nuxt.com/sse"
+    },
+    "nuxt-ui": {
+      "type": "http",
+      "url": "https://ui.nuxt.com/mcp"
+    }
+  }
+}
