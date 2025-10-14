@@ -1,5 +1,8 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { entry, person, rating } from "./schema";
+
+// USER
 
 export const user = sqliteTable("user", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -25,6 +28,16 @@ export const user = sqliteTable("user", {
     .notNull(),
 });
 
+export const userRelations = relations(user, ({ many }) => ({
+  entries: many(entry, { relationName: 'user_entries' }),
+  ratings: many(rating, { relationName: 'user_ratings' }),
+  persons: many(person, { relationName: 'user_persons' }),
+  sessions: many(session, { relationName: 'user_sessions' }),
+  accounts: many(account, { relationName: 'user_accounts' }),
+}));
+
+// SESSION
+
 export const session = sqliteTable("session", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   expiresAt: integer("expires_at", { mode: "timestamp_ms" }).notNull(),
@@ -41,6 +54,16 @@ export const session = sqliteTable("session", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
 });
+
+export const sessionRelations = relations(session, ({ one }) => ({
+  user: one(user, {
+    fields: [session.userId],
+    references: [user.id],
+    relationName: "user_sessions",
+  }),
+}));
+
+// ACCOUNT
 
 export const account = sqliteTable("account", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -67,6 +90,16 @@ export const account = sqliteTable("account", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+
+export const accountRelations = relations(account, ({ one }) => ({
+  user: one(user, {
+    fields: [account.userId],
+    references: [user.id],
+    relationName: "user_accounts",
+  }),
+}));
+
+// VERIFICATION
 
 export const verification = sqliteTable("verification", {
   id: integer("id").primaryKey({ autoIncrement: true }),
