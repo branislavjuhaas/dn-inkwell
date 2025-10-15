@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, unique, primaryKey, } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, unique, primaryKey, index, } from 'drizzle-orm/sqlite-core'
 import { user } from './auth-schema'
 
 // ENTRY
@@ -14,7 +14,9 @@ export const entry = sqliteTable('entry', {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
 }, (table) => [
-  unique().on(table.authorId, table.date)
+  unique().on(table.authorId, table.date),
+  index('entry_author_id_idx').on(table.authorId),
+  index('entry_date_idx').on(table.date),
 ])
 
 export const entryRelations = relations(entry, ({ one, many }) => ({
@@ -36,7 +38,9 @@ export const comment = sqliteTable('comment', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
-})
+}, (table) => [
+  index('comment_entry_id_idx').on(table.entryId),
+])
 
 export const commentRelations = relations(comment, ({ one }) => ({
   entry: one(entry, {
@@ -51,12 +55,14 @@ export const commentRelations = relations(comment, ({ one }) => ({
 export const rating = sqliteTable('rating', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   raterId: integer('rater_id').references(() => user.id, { onDelete: 'cascade' }).notNull(),
-  date: text('date').default(sql`(CURRENT_DATE)`).notNull(),
   score: integer('score').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
-})
+}, (table) => [
+  index('rating_rater_id_idx').on(table.raterId),
+  index('rating_created_at_idx').on(table.createdAt),
+])
 
 export const ratingRelations = relations(rating, ({ one }) => ({
   rater: one(user, {
@@ -77,7 +83,11 @@ export const person = sqliteTable('person', {
   createdAt: integer('created_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
-})
+},
+(table) => [
+  unique().on(table.ownerId, table.name, table.surname),
+  index('person_owner_id_idx').on(table.ownerId),
+])
 
 export const personRelations = relations(person, ({ one, many }) => ({
   owner: one(user, {
@@ -97,7 +107,8 @@ export const mention = sqliteTable('mention', {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
 }, (table) => [
-  primaryKey({ columns: [table.personId, table.entryId ]})
+  primaryKey({ columns: [table.personId, table.entryId ]}),
+  index('mention_entry_id_idx').on(table.entryId),
 ])
 
 export const mentionRelations = relations(mention, ({ one }) => ({

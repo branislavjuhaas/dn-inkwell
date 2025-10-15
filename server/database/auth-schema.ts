@@ -1,5 +1,5 @@
 import { relations, sql } from "drizzle-orm";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
 import { entry, person, rating } from "./schema";
 
 // USER
@@ -26,7 +26,9 @@ export const user = sqliteTable("user", {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+}, (table) => [
+  index('user_email_idx').on(table.email),
+]);
 
 export const userRelations = relations(user, ({ many }) => ({
   entries: many(entry, { relationName: 'user_entries' }),
@@ -53,7 +55,10 @@ export const session = sqliteTable("session", {
   userId: integer("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-});
+}, (table) => [
+  index('session_user_id_idx').on(table.userId),
+  index('session_token_idx').on(table.token),
+]);
 
 export const sessionRelations = relations(session, ({ one }) => ({
   user: one(user, {
@@ -89,7 +94,10 @@ export const account = sqliteTable("account", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+}, (table) => [
+  index('account_user_id_idx').on(table.userId),
+  index('account_provider_idx').on(table.providerId, table.accountId),
+]);
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
@@ -113,4 +121,6 @@ export const verification = sqliteTable("verification", {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-});
+}, (table) => [
+  index('verification_identifier_idx').on(table.identifier),
+]);

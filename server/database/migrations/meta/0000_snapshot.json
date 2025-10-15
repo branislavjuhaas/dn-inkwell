@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "93bf15d3-08f7-4ec6-b3d5-a0509e31125d",
+  "id": "6aa300f0-c0ef-4d70-ad65-7e8e62cb44f8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "comment": {
@@ -37,7 +37,15 @@
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "comment_entry_id_idx": {
+          "name": "comment_entry_id_idx",
+          "columns": [
+            "entry_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "comment_entry_id_entry_id_fk": {
           "name": "comment_entry_id_entry_id_fk",
@@ -106,6 +114,20 @@
         }
       },
       "indexes": {
+        "entry_author_id_idx": {
+          "name": "entry_author_id_idx",
+          "columns": [
+            "author_id"
+          ],
+          "isUnique": false
+        },
+        "entry_date_idx": {
+          "name": "entry_date_idx",
+          "columns": [
+            "date"
+          ],
+          "isUnique": false
+        },
         "entry_author_id_date_unique": {
           "name": "entry_author_id_date_unique",
           "columns": [
@@ -160,7 +182,15 @@
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "mention_entry_id_idx": {
+          "name": "mention_entry_id_idx",
+          "columns": [
+            "entry_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "mention_person_id_person_id_fk": {
           "name": "mention_person_id_person_id_fk",
@@ -248,7 +278,24 @@
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "person_owner_id_idx": {
+          "name": "person_owner_id_idx",
+          "columns": [
+            "owner_id"
+          ],
+          "isUnique": false
+        },
+        "person_owner_id_name_surname_unique": {
+          "name": "person_owner_id_name_surname_unique",
+          "columns": [
+            "owner_id",
+            "name",
+            "surname"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "person_owner_id_user_id_fk": {
           "name": "person_owner_id_user_id_fk",
@@ -285,14 +332,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "date": {
-          "name": "date",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "(CURRENT_DATE)"
-        },
         "score": {
           "name": "score",
           "type": "integer",
@@ -309,7 +348,22 @@
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "rating_rater_id_idx": {
+          "name": "rating_rater_id_idx",
+          "columns": [
+            "rater_id"
+          ],
+          "isUnique": false
+        },
+        "rating_created_at_idx": {
+          "name": "rating_created_at_idx",
+          "columns": [
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "rating_rater_id_user_id_fk": {
           "name": "rating_rater_id_user_id_fk",
@@ -425,7 +479,23 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "account_user_id_idx": {
+          "name": "account_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "account_provider_idx": {
+          "name": "account_provider_idx",
+          "columns": [
+            "provider_id",
+            "account_id"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {
         "account_user_id_user_id_fk": {
           "name": "account_user_id_user_id_fk",
@@ -513,6 +583,20 @@
             "token"
           ],
           "isUnique": true
+        },
+        "session_user_id_idx": {
+          "name": "session_user_id_idx",
+          "columns": [
+            "user_id"
+          ],
+          "isUnique": false
+        },
+        "session_token_idx": {
+          "name": "session_token_idx",
+          "columns": [
+            "token"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {
@@ -621,6 +705,13 @@
             "email"
           ],
           "isUnique": true
+        },
+        "user_email_idx": {
+          "name": "user_email_idx",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
         }
       },
       "foreignKeys": {},
@@ -676,7 +767,15 @@
           "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "verification_identifier_idx": {
+          "name": "verification_identifier_idx",
+          "columns": [
+            "identifier"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
