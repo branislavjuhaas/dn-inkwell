@@ -48,6 +48,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.5
         version: 0.31.5
+      prettier:
+        specifier: 3.6.2
+        version: 3.6.2
 
 packages:
 
